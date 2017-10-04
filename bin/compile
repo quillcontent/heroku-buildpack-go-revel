@@ -147,7 +147,31 @@ then
     FLAGS=(${FLAGS[@]} -ldflags "-X $git_describe_symbol $git_describe")
 fi
 
+
+go get github.com/revel/cmd/revel
+
+# we need revel in a specific version for produce-api so we checkout the relevant branches/dependencies
+# then we let the heroku buildpack run a godep restore
+# followed by us installing revel with go install
+
+cd $GOPATH/src/github.com/revel/revel
+git checkout v0.13.1
+
+cd $GOPATH/src/github.com/revel/config
+git checkout v0.13.0
+
+cd $GOPATH/src/github.com/revel/modules
+git checkout v0.12.0
+
+cd $GOPATH/src/github.com/revel/cmd/revel
+git checkout v0.13.1
+
+# produce-api depends on this version of /x/sys/unix
+cd $GOPATH/src/golang.org/x/sys/unix
+git checkout 62bee037599929a6e9146f29d10dd5208c43507d
+
 unset GIT_DIR # unset git dir or it will mess with goinstall
+
 cd $p
 if test -e $build/Godeps
 then
@@ -160,8 +184,9 @@ else
     go get "${FLAGS[@]}" ./...
 fi
 
-
 mkdir -p $build/.profile.d
 echo 'PATH=$PATH:$HOME/bin' > $build/.profile.d/go.sh
 
-go get github.com/revel/cmd/revel
+# install our version of revel
+cd $GOPATH/src/github.com/revel/cmd/revel
+go install
